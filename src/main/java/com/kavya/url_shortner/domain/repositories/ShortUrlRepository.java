@@ -2,36 +2,21 @@ package com.kavya.url_shortner.domain.repositories;
 
 import com.kavya.url_shortner.domain.entities.ShortUrl;
 import org.springframework.data.domain.Page;
+import org.springframework.data.domain.Pageable;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.Modifying;
 import org.springframework.data.jpa.repository.Query;
 
-import org.springframework.data.domain.Pageable;
-import org.springframework.data.redis.core.RedisHash;
-
 import java.time.Instant;
-import java.util.List;
 import java.util.Optional;
 
-@RedisHash
-public interface ShortUrlRepository extends JpaRepository<ShortUrl,Long> {
-    @Query("select su from ShortUrl su left join fetch su.createdBy where su.isPrivate = false")
-    Page<ShortUrl> findPublicShortUrls(Pageable pageable);
+    public interface ShortUrlRepository extends JpaRepository<ShortUrl, Long> {
 
-    boolean existsByShortKey(String shortkey);
+        boolean existsByShortKey(String shortKey);
 
-    Optional<ShortUrl> findByShortKey(String shortKey);
+        Optional<ShortUrl> findByShortKey(String shortKey);
 
-    Page<ShortUrl> findByCreatedById(Long userId, Pageable pageable);
+        @Query("select su from ShortUrl su order by su.createdAt desc")
+        Page<ShortUrl> findAllShortUrls(Pageable pageable);
 
-    @Modifying
-    void deleteByIdInAndCreatedById(List<Long> ids, Long userId);
-
-    @Query("select u from ShortUrl u left join fetch u.createdBy")
-    Page<ShortUrl> findAllShortUrls(Pageable pageable);
-
-    List<ShortUrl> findByIdInAndCreatedById(List<Long> ids, Long userId);
-
-    void deleteByExpiresAtBefore(Instant now);
-
-}
+    }

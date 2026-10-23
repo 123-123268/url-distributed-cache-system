@@ -2,7 +2,7 @@
 <html lang="en"
       xmlns:th="http://www.thymeleaf.org"
       xmlns:layout="http://www.ultraq.net.nz/thymeleaf/layout"
-      layout:decorate="~{layout}" xmlns:sec="http://www.w3.org/1999/xhtml">
+      layout:decorate="~{layout}">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
@@ -11,36 +11,35 @@
 <body>
 <div layout:fragment="content">
     <div class="jumbotron bg-dark p-5 rounded-3 my-4">
-        <h1 class="gradient-text">
-            Shorten Here, Share Anywhere!
-        </h1>
+        <h1 class="gradient-text">Shorten Here, Share Anywhere!</h1>
     </div>
+
     <div class="card mt-4 bg-dark">
         <div class="card-header">
             <h5 class="card-title mb-0 text-light">Create Here!</h5>
         </div>
+
         <div class="card-body">
-            <form th:action="@{/short-urls}" method="post"
+            <form th:action="@{/short-urls}"
+                  method="post"
                   th:object="${createShortUrlForm}">
                 <div class="mb-3">
-                    <label for="originalUrl" class="form-label text-light">Original URL</label>
-                    <input type="text" class="form-control" id="originalUrl"
+                    <label for="originalUrl"
+                           class="form-label text-light">
+                        Original URL
+                    </label>
+
+                    <input type="url"
+                           class="form-control"
+                           id="originalUrl"
                            th:field="*{originalUrl}"
-                           placeholder="https://example.com/my-long-url">
+                           placeholder="https://example.com/my-long-url"
+                           required>
+
                     <div class="text-danger"
                          th:if="${#fields.hasErrors('originalUrl')}"
-                         th:errors="*{originalUrl}"></div>
-                </div>
-                <div class="mb-3" sec:authorize="isAuthenticated()">
-                    <label for="expirationInDays" class="form-label text-light">Expiration (days)</label>
-                    <input type="number" class="form-control" id="expirationInDays"
-                           th:field="*{expirationInDays}"
-                           min="1" max="365">
-                    <div class="form-text">Leave empty to never expire</div>
-                </div>
-                <div class="mb-3 form-check" sec:authorize="isAuthenticated()">
-                    <input type="checkbox" class="form-check-input" id="isPrivate" th:field="*{isPrivate}">
-                    <label class="form-check-label text-light" for="isPrivate">Private (only you can access)</label>
+                         th:errors="*{originalUrl}">
+                    </div>
                 </div>
 
                 <button type="submit" class="btn btn-gradient">
@@ -50,35 +49,46 @@
         </div>
     </div>
 
-    <h2 class="mt-5">Public Shortened URLs</h2>
-    <div th:if="${shortUrls.data.isEmpty()}" class="alert alert-info bg-dark">
-        No public URLs have been created yet.
+    <h2 class="mt-5">Shortened URLs</h2>
+
+    <div th:if="${shortUrls.data.isEmpty()}"
+         class="alert alert-info bg-dark">
+        No URLs have been created yet.
     </div>
-    <div th:unless="${shortUrls.data.isEmpty()}" class="table-responsive bg-dark">
+
+    <div th:unless="${shortUrls.data.isEmpty()}"
+         class="table-responsive bg-dark">
         <table class="table table-dark table-hover">
             <thead>
             <tr>
                 <th>Short URL</th>
                 <th>Original URL</th>
-                <th>Created By</th>
                 <th>Created</th>
-                <th>Expires</th>
             </tr>
             </thead>
+
             <tbody>
             <tr th:each="url : ${shortUrls.data}">
                 <td>
-                    <a th:href="@{/s/{key}(key=${url.shortKey})}" th:text="${baseUrl + '/s/' + url.shortKey}" target="_blank"></a>
+                    <a th:href="@{/s/{key}(key=${url.shortKey})}"
+                       th:text="${baseUrl + '/s/' + url.shortKey}"
+                       target="_blank"></a>
                 </td>
+
                 <td>
-                    <a th:href="${url.originalUrl}" th:text="${#strings.abbreviate(url.originalUrl, 50)}" target="_blank"></a>
+                    <a th:href="${url.originalUrl}"
+                       th:text="${#strings.abbreviate(url.originalUrl, 50)}"
+                       target="_blank"></a>
                 </td>
-                <td th:text="${url.createdBy != null ? url.createdBy.name : 'Guest'}"></td>
-                <td th:text="${#temporals.format(url.createdAt, 'yyyy-MM-dd HH:mm')}"></td>
-                <td th:text="${url.expiresAt != null ? #temporals.format(url.expiresAt, 'yyyy-MM-dd HH:mm') : 'Never'}"></td>
+
+                <td th:text="${#temporals.format(
+                    url.createdAt,
+                    'yyyy-MM-dd HH:mm'
+                )}"></td>
             </tr>
             </tbody>
         </table>
+
         <div th:insert="~{pagination}"></div>
     </div>
 </div>
