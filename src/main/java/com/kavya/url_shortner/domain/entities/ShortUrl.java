@@ -24,21 +24,6 @@ public class ShortUrl implements Serializable {
     @Column(name = "original_url", nullable = false, length = Integer.MAX_VALUE)
     private String originalUrl;
 
-    @ColumnDefault("false")
-    @Column(name = "is_private", nullable = false)
-    private Boolean isPrivate;
-
-    @Column(name = "expires_at")
-    private Instant expiresAt;
-
-    @ManyToOne(fetch = FetchType.LAZY)
-    @JoinColumn(name = "created_by")
-    private User createdBy;
-
-    @ColumnDefault("0")
-    @Column(name = "click_count", nullable = false)
-    private Long clickCount;
-
     @ColumnDefault("CURRENT_TIMESTAMP")
     @Column(name = "created_at", nullable = false)
     private Instant createdAt;
@@ -65,38 +50,6 @@ public class ShortUrl implements Serializable {
 
     public void setOriginalUrl(String originalUrl) {
         this.originalUrl = originalUrl;
-    }
-
-    public Boolean getIsPrivate() {
-        return isPrivate;
-    }
-
-    public void setIsPrivate(Boolean isPrivate) {
-        this.isPrivate = isPrivate;
-    }
-
-    public Instant getExpiresAt() {
-        return expiresAt;
-    }
-
-    public void setExpiresAt(Instant expiresAt) {
-        this.expiresAt = expiresAt;
-    }
-
-    public User getCreatedBy() {
-        return createdBy;
-    }
-
-    public void setCreatedBy(User createdBy) {
-        this.createdBy = createdBy;
-    }
-
-    public Long getClickCount() {
-        return clickCount;
-    }
-
-    public void setClickCount(Long clickCount) {
-        this.clickCount = clickCount;
     }
 
     public Instant getCreatedAt() {
