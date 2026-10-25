@@ -26,6 +26,7 @@ services:
       DB_PASSWORD: postgres
       BASE_URL: http://localhost:8080
       SERVER_PORT: 8080
+      SNOWFLAKE_WORKER_ID: 1
     depends_on:
       postgres:
         condition: service_healthy
@@ -40,6 +41,7 @@ services:
       DB_PASSWORD: postgres
       BASE_URL: http://localhost:8080
       SERVER_PORT: 8080
+      SNOWFLAKE_WORKER_ID: 2
     depends_on:
       postgres:
         condition: service_healthy

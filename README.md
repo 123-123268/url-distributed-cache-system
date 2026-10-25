@@ -67,15 +67,24 @@ This flow diagram describes the end-to-end lifecycle of a shortened URL, includi
 </p>
 - ## Short URL Generation
 
-Instead of generating random keys and repeatedly checking the database for collisions, the system uses a range-based ID allocation strategy.
+Short URLs use application-generated Snowflake IDs, so the two containers can create records in the same PostgreSQL database without coordinating through a database sequence.
 
-1. A counter in PostgreSQL tracks the next available ID.
-2. The application reserves a batch of IDs in memory.
-3. New URLs consume IDs from the reserved range.
-4. The counter is periodically synchronized back to PostgreSQL.
-5. Numeric IDs are converted to compact Base62 strings.
+| Field | Bits | Description |
+| --- | ---: | --- |
+| Timestamp | 41 | Milliseconds since `2024-01-01T00:00:00Z` (about 69 years) |
+| Worker ID | 10 | Instance number from 0 to 1023 |
+| Sequence | 12 | 0 to 4095 IDs produced during the same millisecond |
 
-This approach eliminates database lookups during URL creation and reduces contention under load.
+The ID remains a positive 63-bit `BIGINT`. Each ID is deterministically Base62-encoded for `short_key`; the database permits up to 11 Base62 characters. The generator is synchronized within an application instance, waits for a new millisecond after sequence rollover, and fails fast if the system clock moves backwards to avoid duplicates.
+
+`compose.yaml` assigns `SNOWFLAKE_WORKER_ID=1` to `app-1` and
+`SNOWFLAKE_WORKER_ID=2` to `app-2`. Worker IDs are explicit configuration,
+not derived from container IP addresses or host ports. Any additional live
+instance must be configured with a different value in the range 0–1023;
+two running instances must never share a worker ID. A container restart must
+stop the old instance before starting the replacement.
+
+The Flyway migrations remove the `BIGSERIAL` default and its sequence, making the application the sole owner of `short_urls.id` generation.
 ## Redirect Flow
 
 When a user accesses a short URL:
@@ -118,7 +127,7 @@ Requests exceeding configured thresholds receive HTTP 429 (Too Many Requests), h
 
 2. **Start the required services using Docker**
    ```bash
-   docker compose up -d
+   docker compose up -d --build
    ```
 
 3. **Run the Spring Boot application**
@@ -131,6 +140,47 @@ Requests exceeding configured thresholds receive HTTP 429 (Too Many Requests), h
      ```
      http://localhost:8080
      ```
+
+## Verifying distributed generation
+
+Run the Snowflake unit tests:
+
+```bash
+./mvnw test -Dtest=SnowflakeIdGeneratorTest,Base62EncoderTest
+```
+
+Then start both application instances and inspect the shared database after
+creating URLs through both direct instance ports:
+
+```bash
+docker compose up -d --build
+docker compose ps
+```
+
+Create URLs through `http://localhost:8081` and `http://localhost:8082`, then
+inspect the shared database:
+
+```bash
+docker compose exec postgres psql -U postgres -d postgres -c "SELECT id, short_key FROM short_urls ORDER BY created_at DESC;"
+```
+
+`id` and `short_key` should both be unique. To verify concurrent generation,
+create multiple URLs through both ports and run:
+
+```bash
+docker compose exec postgres psql -U postgres -d postgres -c "SELECT COUNT(*) AS rows, COUNT(DISTINCT id) AS distinct_ids, COUNT(DISTINCT short_key) AS distinct_short_keys FROM short_urls;"
+```
+
+The three counts should be equal. Restart one application container and repeat
+the test:
+
+```bash
+docker compose restart app-1
+docker compose logs -f app-1 app-2
+```
+
+The included unit tests cover single-instance uniqueness, concurrent
+generation, sequence rollover, distinct worker IDs, and clock rollback.
      
 ## Tech Stack
 

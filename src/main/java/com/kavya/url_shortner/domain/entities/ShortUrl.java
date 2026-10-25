@@ -14,11 +14,10 @@ public class ShortUrl implements Serializable {
     @Serial
     private static final long serialVersionUID = 1L;
     @Id
-    @GeneratedValue(strategy = GenerationType.IDENTITY)
     @Column(name = "id", nullable = false)
     private Long id;
 
-    @Column(name = "short_key", nullable = false, length = 10)
+    @Column(name = "short_key", nullable = false, length = 11)
     private String shortKey;
 
     @Column(name = "original_url", nullable = false, length = Integer.MAX_VALUE)

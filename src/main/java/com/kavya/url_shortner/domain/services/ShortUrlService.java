@@ -13,7 +13,6 @@ import org.springframework.data.domain.Sort;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
-import java.security.SecureRandom;
 import java.time.Instant;
 import java.util.Optional;
 
@@ -23,24 +22,24 @@ import static java.time.temporal.ChronoUnit.DAYS;
 @Transactional(readOnly = true)
 public class ShortUrlService {
 
-    private static final int SHORT_KEY_LENGTH = 6;
-    private static final String CHARACTERS =
-            "0123456789ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz";
-
-    private final SecureRandom random = new SecureRandom();
-
     private final ApplicationProperties properties;
     private final ShortUrlRepository shortUrlRepository;
     private final EntityMapper entityMapper;
+    private final SnowflakeIdGenerator snowflakeIdGenerator;
+    private final Base62Encoder base62Encoder;
 
     public ShortUrlService(
             ApplicationProperties properties,
             ShortUrlRepository shortUrlRepository,
-            EntityMapper entityMapper
+            EntityMapper entityMapper,
+            SnowflakeIdGenerator snowflakeIdGenerator,
+            Base62Encoder base62Encoder
     ) {
         this.properties = properties;
         this.shortUrlRepository = shortUrlRepository;
         this.entityMapper = entityMapper;
+        this.snowflakeIdGenerator = snowflakeIdGenerator;
+        this.base62Encoder = base62Encoder;
     }
 
     public PagedResult<shortUrlDto> findAllPublicShortUrls(
@@ -66,8 +65,10 @@ public class ShortUrlService {
         }
 
         ShortUrl shortUrl = new ShortUrl();
+        long snowflakeId = snowflakeIdGenerator.nextId();
+        shortUrl.setId(snowflakeId);
         shortUrl.setOriginalUrl(command.originalUrl());
-        shortUrl.setShortKey(generateUniqueShortKey());
+        shortUrl.setShortKey(base62Encoder.encode(snowflakeId));
         shortUrl.setCreatedAt(Instant.now());
 
         ShortUrl savedShortUrl = shortUrlRepository.save(shortUrl);
@@ -78,27 +79,6 @@ public class ShortUrlService {
         return shortUrlRepository
                 .findByShortKey(shortKey)
                 .map(entityMapper::toShortUrlDto);
-    }
-
-    private String generateUniqueShortKey() {
-        String shortKey;
-
-        do {
-            shortKey = generateRandomShortKey();
-        } while (shortUrlRepository.existsByShortKey(shortKey));
-
-        return shortKey;
-    }
-
-    private String generateRandomShortKey() {
-        StringBuilder result = new StringBuilder(SHORT_KEY_LENGTH);
-
-        for (int i = 0; i < SHORT_KEY_LENGTH; i++) {
-            int index = random.nextInt(CHARACTERS.length());
-            result.append(CHARACTERS.charAt(index));
-        }
-
-        return result.toString();
     }
 
     private Pageable getPageable(int page, int pageSize) {
